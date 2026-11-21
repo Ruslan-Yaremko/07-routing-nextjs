@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
@@ -9,6 +10,8 @@ import type { FetchNotesResponse } from "@/types/api";
 import SearchBox from "@/components/SearchBox/SearchBox";
 import Pagination from "@/components/Pagination/Pagination";
 import NoteList from "@/components/NoteList/NoteList";
+import Modal from "@/components/Modal/Modal";
+import NoteForm from "@/components/NoteForm/NoteForm";
 
 interface NotesClientProps {
   tag: string;
@@ -18,17 +21,24 @@ export default function NotesClient({ tag }: NotesClientProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Обробка пошуку та негайне скидання сторінки
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
 
+  // Debounce пошуку
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
-      setCurrentPage(1);
     }, 500);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Отримання нотаток
   const {
     data,
     isLoading,
@@ -49,12 +59,20 @@ export default function NotesClient({ tag }: NotesClientProps) {
       }),
   });
 
- 
+  // Відкриття модального вікна
+  const handleOpenModal = () => {
+    setIsModalOpen(true);
+  };
+
+  // Закриття модального вікна
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
   if (isLoading) {
     return <p>Loading notes...</p>;
   }
 
-  // Стан помилки
   if (isError) {
     return (
       <p>
@@ -68,21 +86,41 @@ export default function NotesClient({ tag }: NotesClientProps) {
       {/* Пошук */}
       <SearchBox
         value={searchQuery}
-        onSearch={setSearchQuery}
+        onSearch={handleSearch}
       />
 
-      {/* Список нотаток */}
-      {data && (
-        <>
-          <NoteList notes={data.notes} />
+      {/* Кнопка створення нотатки */}
+      <button
+        type="button"
+        onClick={handleOpenModal}
+      >
+        Create note
+      </button>
 
-          {/* Пагінація */}
-          <Pagination
-            page={currentPage}
-            totalPages={data.totalPages}
-            onPageChange={setCurrentPage}
-          />
-        </>
+      {/* Список нотаток */}
+      {data?.notes && data.notes.length > 0 && (
+        <NoteList notes={data.notes} />
+      )}
+
+      {/* Якщо нотаток немає */}
+      {data && data.notes.length === 0 && (
+        <p>No notes found.</p>
+      )}
+
+      {/* Пагінація */}
+      {data && (
+        <Pagination
+          page={currentPage}
+          totalPages={data.totalPages}
+          onPageChange={setCurrentPage}
+        />
+      )}
+
+      {/* Модальне вікно */}
+      {isModalOpen && (
+        <Modal onClose={handleCloseModal}>
+          <NoteForm onClose={handleCloseModal} />
+        </Modal>
       )}
     </div>
   );
